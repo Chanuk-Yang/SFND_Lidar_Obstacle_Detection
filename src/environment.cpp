@@ -75,6 +75,43 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
         viewer->addCoordinateSystem (1.0);
 }
 
+void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointClouds<pcl::PointXYZI>* pointProcessorI, pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
+{
+  // ----------------------------------------------------
+  // -----Open 3D viewer and display City Block     -----
+  // ----------------------------------------------------
+    // filter cloud (o)
+    // segment plane (o)
+    // clustering (o)
+    // bounding box (x)
+
+    pcl::PointCloud<pcl::PointXYZI>:: Ptr filterCloud (new pcl::PointCloud<pcl::PointXYZI>);
+    filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.5, Eigen::Vector4f (-30, -10, -5, 1), Eigen::Vector4f (30, 10, 5, 1));
+    // renderPointCloud(viewer,inputCloud,"inputCloud");
+
+
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr > segment_cloud = pointProcessorI->SegmentPlane(filterCloud, 50, 0.3);
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr obstacle_cloud = segment_cloud.first;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr floor_cloud = segment_cloud.second;
+    renderPointCloud(viewer,floor_cloud,"floor_cloud");
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_clusters = pointProcessorI->Clustering(obstacle_cloud, 0.7,5,150);
+
+    int cluster_id;
+    std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
+
+    for(pcl::PointCloud<pcl::PointXYZI>::Ptr cluster : cloud_clusters){
+        // std::cout <<"cluster size ";
+        // pointProcessorI->numPoints(cluster);
+        BoxQ box = pointProcessorI->BoundingBox(cluster);
+        renderPointCloud(viewer, cluster, "obst cloud"+std::to_string(cluster_id),colors[cluster_id]);
+        renderBox(viewer, box, cluster_id);
+        ++cluster_id;
+    }   
+
+}
+
 
 int main (int argc, char** argv)
 {
@@ -83,10 +120,35 @@ int main (int argc, char** argv)
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
-    simpleHighway(viewer);
+    // simpleHighway(viewer);
+
+    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
+    std::vector<boost::filesystem::path> stream = pointProcessorI->streamPcd("../src/sensors/data/pcd/data_2");
+    auto streamIterator = stream.begin();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloudI;
+
 
     while (!viewer->wasStopped ())
     {
+
+    // Clear viewer
+        viewer->removeAllPointClouds();
+        viewer->removeAllShapes();
+
+        // Load pcd and run obstacle detection process
+        inputCloudI = pointProcessorI->loadPcd((*streamIterator).string());
+
+        auto startTime = std::chrono::steady_clock::now();
+        cityBlock(viewer, pointProcessorI, inputCloudI);
+        auto endTime = std::chrono::steady_clock::now();
+        auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        std::cout << "Total time is " << elapsedTime.count() << " milliseconds"<< std::endl;
+
+        // renderPointCloud(viewer, inputCloudI, "scan_data");
+        streamIterator++;
+        if(streamIterator == stream.end())
+            streamIterator = stream.begin();
+
         viewer->spinOnce ();
-    } 
+    }
 }
