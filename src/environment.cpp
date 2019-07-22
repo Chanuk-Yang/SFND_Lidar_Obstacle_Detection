@@ -86,17 +86,18 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
     // bounding box (x)
 
     pcl::PointCloud<pcl::PointXYZI>:: Ptr filterCloud (new pcl::PointCloud<pcl::PointXYZI>);
-    filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.5, Eigen::Vector4f (-30, -10, -5, 1), Eigen::Vector4f (30, 10, 5, 1));
+    filterCloud = pointProcessorI->FilterCloud(inputCloud, 0.5, Eigen::Vector4f (-20, -15, -5, 1), Eigen::Vector4f (60, 15, 5, 1));
     // renderPointCloud(viewer,inputCloud,"inputCloud");
 
 
-    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr > segment_cloud = pointProcessorI->SegmentPlane(filterCloud, 50, 0.3);
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr > segment_cloud = pointProcessorI->SegmentPlane(filterCloud, 50, 0.6);
 
     pcl::PointCloud<pcl::PointXYZI>::Ptr obstacle_cloud = segment_cloud.first;
     pcl::PointCloud<pcl::PointXYZI>::Ptr floor_cloud = segment_cloud.second;
-    renderPointCloud(viewer,floor_cloud,"floor_cloud");
+    renderPointCloud(viewer,obstacle_cloud,"obstacle_cloud",Color(1,1,1));
+    // renderPointCloud(viewer,floor_cloud,"floor_cloud",Color(1,0,1));
 
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_clusters = pointProcessorI->Clustering(obstacle_cloud, 0.7,5,150);
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_clusters = pointProcessorI->Clustering(obstacle_cloud, 1,10,100);
 
     int cluster_id;
     std::vector<Color> colors = {Color(1,0,0), Color(0,1,0), Color(0,0,1)};
@@ -105,7 +106,7 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
         // std::cout <<"cluster size ";
         // pointProcessorI->numPoints(cluster);
         BoxQ box = pointProcessorI->BoundingBox(cluster);
-        renderPointCloud(viewer, cluster, "obst cloud"+std::to_string(cluster_id),colors[cluster_id]);
+        renderPointCloud(viewer, cluster, "obst cloud"+std::to_string(cluster_id),colors[1]);
         renderBox(viewer, box, cluster_id);
         ++cluster_id;
     }   

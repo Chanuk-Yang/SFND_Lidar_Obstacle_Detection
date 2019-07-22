@@ -36,16 +36,16 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
 
     typename pcl::PointCloud<PointT>::Ptr region_cloud (new pcl::PointCloud<PointT>);
     typename pcl::CropBox<PointT> region (true);
+    region.setInputCloud(filtered_cloud);
     region.setMin(minPoint);
     region.setMax(maxPoint);
-    region.setInputCloud(filtered_cloud);
     region.filter(*region_cloud);
 
     std::vector<int> indices;
     typename pcl::CropBox<PointT> roof (true);
+    roof.setInputCloud(region_cloud);
     roof.setMin(Eigen::Vector4f (-2.5, -1.7, -1, 1));
     roof.setMax(Eigen::Vector4f (2.7, 1.7, 1, 1));
-    roof.setInputCloud(region_cloud);
     roof.filter(indices);
 
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
